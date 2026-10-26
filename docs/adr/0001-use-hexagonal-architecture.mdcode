@@ -1,0 +1,22 @@
+# 1. Use hexagonal architecture
+
+Date: 2026-10-26
+Status: Accepted
+
+## Context
+The app will get sentences from several sources (Tatoeba, manual entry,
+friends, later AI) and will change storage (SQLite now, PostgreSQL later).
+These outside systems will change; the learning logic should not.
+
+## Decision
+Split the code into three layers inside `src/langex/`:
+- `domain/`: core concepts and rules, no external imports
+- `application/`: use cases and ports (interfaces such as `SentenceSource`)
+- `adapters/`: implementations that talk to the outside world
+
+Dependencies point inward only.
+
+## Consequences
+- New sentence sources or databases can be added without changing core logic.
+- The domain can be tested quickly without a database or internet.
+- More files and folders than a simple script; some extra structure up front.
