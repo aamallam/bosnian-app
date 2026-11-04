@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      dev-tools:
+        patterns: ["pytest*", "ruff", "mypy", "import-linter", "bandit", "pip-audit"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  # Enable when the Flutter app exists:
+  # - package-ecosystem: pub
+  #   directory: /mobile
+  #   schedule:
+  #     interval: weekly

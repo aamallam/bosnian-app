@@ -1,0 +1,128 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "langex"
+version = "0.1.0"
+description = "Pair-learning language exchange app: backend"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.6",
+    "mypy>=1.11",
+    "import-linter>=2.1",
+    "bandit>=1.7",
+    "pip-audit>=2.7",
+]
+
+# Languages are plugins. A new language can ship as its own package that
+# registers a profile under this entry-point group; no core change needed.
+[project.entry-points."langex.languages"]
+bs = "langex.languages.profiles.bosnian:PROFILE"
+ar = "langex.languages.profiles.arabic:PROFILE"
+en = "langex.languages.profiles.english:PROFILE"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# ---------------------------------------------------------------- testing
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+
+[tool.coverage.run]
+source = ["langex"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_empty = true
+
+# ---------------------------------------------------------------- linting
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E", "W", "F",   # pycodestyle, pyflakes
+    "I",             # import order
+    "B",             # bugbear
+    "UP",            # pyupgrade
+    "S",             # bandit security rules
+    "SIM", "RET",    # simplifications
+    "N",             # naming
+    "PT",            # pytest style
+    "RUF",
+]
+# The app is multilingual by design: Cyrillic and Arabic letters are intended.
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PT011"]  # assert is how pytest works; broad raises ok in value-object tests
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+mypy_path = "src"
+packages = ["langex"]
+
+# ------------------------------------------------- architecture contracts
+# Enforced in CI: breaking a boundary fails the build.
+[tool.importlinter]
+root_package = "langex"
+include_external_packages = false
+
+[[tool.importlinter.contracts]]
+name = "Bounded contexts are independent (talk via shared_kernel or events)"
+type = "independence"
+modules = [
+    "langex.content",
+    "langex.pairing",
+    "langex.learning",
+    "langex.identity",
+]
+
+[[tool.importlinter.contracts]]
+name = "Hexagonal layers: adapters -> application -> domain"
+type = "layers"
+containers = [
+    "langex.content",
+    "langex.pairing",
+    "langex.learning",
+    "langex.identity",
+    "langex.languages",
+]
+layers = ["(adapters)", "(application)", "domain"]
+exhaustive = false
+
+[[tool.importlinter.contracts]]
+name = "Shared kernel depends on nothing else in the app"
+type = "forbidden"
+source_modules = ["langex.shared_kernel"]
+forbidden_modules = [
+    "langex.content",
+    "langex.pairing",
+    "langex.learning",
+    "langex.identity",
+    "langex.languages",
+    "langex.bootstrap",
+]
+
+[[tool.importlinter.contracts]]
+name = "Only the composition root wires contexts together"
+type = "forbidden"
+source_modules = [
+    "langex.content",
+    "langex.pairing",
+    "langex.learning",
+    "langex.identity",
+    "langex.languages",
+]
+forbidden_modules = ["langex.bootstrap"]

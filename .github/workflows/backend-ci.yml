@@ -1,0 +1,63 @@
+name: backend-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ["backend/**", ".github/workflows/backend-ci.yml"]
+
+# Least privilege: jobs get read-only access unless they ask for more.
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # TODO(phase 0): pin each action to a full commit SHA; Dependabot keeps them current.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/pyproject.toml
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint
+        run: ruff check . && ruff format --check .
+      - name: Types
+        run: mypy
+      - name: Architecture boundaries
+        run: lint-imports
+      - name: Tests with coverage
+        run: pytest --cov --cov-report=term-missing
+      - name: Static security analysis
+        run: bandit -q -r src
+      - name: Dependency vulnerabilities
+        run: pip-audit --skip-editable
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
