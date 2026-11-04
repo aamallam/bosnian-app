@@ -26,6 +26,7 @@ First language pair: **Bosnian ⇄ Arabic**. Any other pair must work without co
 | Mobile | Flutter, feature-first clean architecture, offline-first | [ADR 0005](adr/0005-flutter-mobile-client.md) |
 | External content | Automated collection from public accounts and pages, **with guardrails** | [ADR 0006](adr/0006-external-content-ingestion.md) |
 | Auth | Sign in with Apple / Google (OIDC) + email passkey; no own password store | [ADR 0007](adr/0007-authentication.md) |
+| Spaced repetition | FSRS through the reference library (py-fsrs), behind a `Scheduler` port | [ADR 0008](adr/0008-fsrs-via-reference-library.md) |
 
 ## 3. Repository layout
 
@@ -93,8 +94,8 @@ I will refine them once you tell me how many hours a week you can put in.
 
 | Phase | Goal | Size | Done when |
 |---|---|---|---|
-| **0. Foundations** ✅ mostly done | Repo hygiene, monorepo layout, lint/type/test/security tooling, CI, ADRs | S | CI green on `main`, branch protection on, actions pinned to SHAs |
-| **1. Learning core** | FSRS scheduler, `ReviewCard`, `ReviewLog`, review session use case, in-memory adapters | M | A simulated learner can review 100 cards with correct due dates; property-based tests |
+| **0. Foundations** ✅ done (branch protection still to switch on) | Repo hygiene, monorepo layout, lint/type/test/security tooling, CI, ADRs | S | CI green on `main`, branch protection on, actions pinned to SHAs |
+| **1. Learning core** ✅ in review | FSRS scheduler, `ReviewCard`, `ReviewLog`, review session use case, in-memory adapters | M | A simulated learner can review 100 cards with correct due dates; property-based tests |
 | **2. Pairing core** | Pair, Invitation, Contribution, Attempt, Correction, DailyGoal, Streak; domain events | M | Two simulated users can exchange sentences for a "week" in tests |
 | **3. API + persistence** | FastAPI, Postgres, Alembic, OIDC sign-in, authorisation, rate limits, OpenAPI, staging deploy | L | Staging passes OWASP API Top 10 checks; contract tests green |
 | **4. Mobile MVP** | Flutter: onboarding, invite partner, add sentence + audio, daily review, corrections, offline sync | L | You and your friend use it daily for 2 weeks (dogfood) |
