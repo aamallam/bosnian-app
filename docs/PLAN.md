@@ -28,6 +28,7 @@ First language pair: **Bosnian ⇄ Arabic**. Any other pair must work without co
 | Auth | Sign in with Apple / Google (OIDC) + email passkey; no own password store | [ADR 0007](adr/0007-authentication.md) |
 | Spaced repetition | FSRS through the reference library (py-fsrs), behind a `Scheduler` port | [ADR 0008](adr/0008-fsrs-via-reference-library.md) |
 | Pairing | Hashed single-use invitations, contributions, corrections, shared streak with cover | [ADR 0009](adr/0009-pairing-model.md) |
+| Hosting (for now) | $0: Render (API container), Neon (Postgres), Cloudflare R2 (audio); Cloud Run as next step | [ADR 0010](adr/0010-free-tier-hosting.md) |
 
 ## 3. Repository layout
 
@@ -166,6 +167,6 @@ while I work; they do not run inside your app. At run time the app needs its
 3. Minimum user age (13+ or 16+)? This drives consent rules (COPPA, GDPR).
 4. Which countries first? EU users mean GDPR applies in full.
 5. Money: free, freemium, or subscription? This affects store setup and the data model.
-6. Hosting budget per month, and any cloud you already use?
+6. ~~Hosting budget~~ Decided: free tiers for now (ADR 0010). Budget needed later for the Apple Developer Program ($99/year) and Google Play ($25 once).
 7. Is the app name decided? `langex` is a placeholder.
 8. Which social accounts and sites do you want first? We can ask those creators for permission, which removes most of the legal risk.
