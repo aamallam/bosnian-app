@@ -27,6 +27,8 @@ First language pair: **Bosnian ⇄ Arabic**. Any other pair must work without co
 | External content | Automated collection from public accounts and pages, **with guardrails** | [ADR 0006](adr/0006-external-content-ingestion.md) |
 | Auth | Sign in with Apple / Google (OIDC) + email passkey; no own password store | [ADR 0007](adr/0007-authentication.md) |
 | Spaced repetition | FSRS through the reference library (py-fsrs), behind a `Scheduler` port | [ADR 0008](adr/0008-fsrs-via-reference-library.md) |
+| Pairing | Hashed single-use invitations, contributions, corrections, shared streak with cover | [ADR 0009](adr/0009-pairing-model.md) |
+| Hosting (for now) | $0: Render (API container), Neon (Postgres), Cloudflare R2 (audio); Cloud Run as next step | [ADR 0010](adr/0010-free-tier-hosting.md) |
 
 ## 3. Repository layout
 
@@ -96,7 +98,7 @@ I will refine them once you tell me how many hours a week you can put in.
 |---|---|---|---|
 | **0. Foundations** ✅ done (branch protection still to switch on) | Repo hygiene, monorepo layout, lint/type/test/security tooling, CI, ADRs | S | CI green on `main`, branch protection on, actions pinned to SHAs |
 | **1. Learning core** ✅ in review | FSRS scheduler, `ReviewCard`, `ReviewLog`, review session use case, in-memory adapters | M | A simulated learner can review 100 cards with correct due dates; property-based tests |
-| **2. Pairing core** | Pair, Invitation, Contribution, Attempt, Correction, DailyGoal, Streak; domain events | M | Two simulated users can exchange sentences for a "week" in tests |
+| **2. Pairing core** ✅ in review | Pair, Invitation, Contribution, Attempt, Correction, DailyGoal, Streak; domain events | M | Two simulated users can exchange sentences for a "week" in tests |
 | **3. API + persistence** | FastAPI, Postgres, Alembic, OIDC sign-in, authorisation, rate limits, OpenAPI, staging deploy | L | Staging passes OWASP API Top 10 checks; contract tests green |
 | **4. Mobile MVP** | Flutter: onboarding, invite partner, add sentence + audio, daily review, corrections, offline sync | L | You and your friend use it daily for 2 weeks (dogfood) |
 | **5. Content sources** | Tatoeba import, Wiktionary lookup, share-sheet capture, URL capture, then the collection worker | M–L | Each source runs as an isolated adapter with its guardrails (ADR 0006) |
@@ -165,6 +167,6 @@ while I work; they do not run inside your app. At run time the app needs its
 3. Minimum user age (13+ or 16+)? This drives consent rules (COPPA, GDPR).
 4. Which countries first? EU users mean GDPR applies in full.
 5. Money: free, freemium, or subscription? This affects store setup and the data model.
-6. Hosting budget per month, and any cloud you already use?
+6. ~~Hosting budget~~ Decided: free tiers for now (ADR 0010). Budget needed later for the Apple Developer Program ($99/year) and Google Play ($25 once).
 7. Is the app name decided? `langex` is a placeholder.
 8. Which social accounts and sites do you want first? We can ask those creators for permission, which removes most of the legal risk.
