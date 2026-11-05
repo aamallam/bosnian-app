@@ -9,6 +9,14 @@ description = "Pair-learning language exchange app: backend"
 requires-python = ">=3.12"
 dependencies = [
     "fsrs>=6.3,<7",  # spaced-repetition scheduler (MIT); used only in learning.adapters
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "pydantic>=2.8,<3",
+    "pydantic-settings>=2.4,<3",
+    "sqlalchemy>=2.0.30,<3",
+    "alembic>=1.13,<2",
+    "psycopg[binary]>=3.2,<4",
+    "pyjwt[crypto]>=2.9,<3",
 ]
 
 [project.optional-dependencies]
@@ -21,6 +29,7 @@ dev = [
     "import-linter>=2.1",
     "bandit>=1.7",
     "pip-audit>=2.7",
+    "httpx>=0.27",  # FastAPI TestClient
 ]
 
 # Languages are plugins. A new language can ship as its own package that
@@ -68,7 +77,8 @@ select = [
 ignore = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "PT011"]  # assert is how pytest works; broad raises ok in value-object tests
+"tests/**" = ["S101", "PT011", "S105", "S106"]  # test secrets are fake
+"migrations/**" = ["N999"]  # assert is how pytest works; broad raises ok in value-object tests
 
 [tool.mypy]
 strict = true
@@ -116,6 +126,8 @@ forbidden_modules = [
     "langex.identity",
     "langex.languages",
     "langex.bootstrap",
+    "langex.api",
+    "langex.platform",
 ]
 
 [[tool.importlinter.contracts]]
@@ -128,4 +140,37 @@ source_modules = [
     "langex.identity",
     "langex.languages",
 ]
-forbidden_modules = ["langex.bootstrap"]
+forbidden_modules = ["langex.bootstrap", "langex.api"]
+
+[[tool.importlinter.contracts]]
+name = "The composition root does not depend on the HTTP layer"
+type = "forbidden"
+source_modules = ["langex.bootstrap"]
+forbidden_modules = ["langex.api"]
+
+[[tool.importlinter.contracts]]
+name = "HTTP layer calls use cases, never adapters directly"
+type = "forbidden"
+allow_indirect_imports = true  # it reaches adapters only through the composition root
+source_modules = ["langex.api"]
+forbidden_modules = [
+    "langex.identity.adapters",
+    "langex.pairing.adapters",
+    "langex.learning.adapters",
+    "langex.languages.adapters",
+    "langex.content.adapters",
+]
+
+[[tool.importlinter.contracts]]
+name = "Platform helpers are technical only"
+type = "forbidden"
+source_modules = ["langex.platform"]
+forbidden_modules = [
+    "langex.content",
+    "langex.pairing",
+    "langex.learning",
+    "langex.identity",
+    "langex.languages",
+    "langex.bootstrap",
+    "langex.api",
+]

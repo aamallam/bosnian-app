@@ -1,0 +1,9 @@
+# Send only what the image needs to the Docker build.
+*
+!pyproject.toml
+!src/
+!alembic.ini
+!migrations/
+!docker-entrypoint.sh
+**/__pycache__
+**/*.pyc

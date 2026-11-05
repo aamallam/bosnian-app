@@ -7,6 +7,10 @@ updates:
     groups:
       dev-tools:
         patterns: ["pytest*", "ruff", "mypy", "import-linter", "bandit", "pip-audit"]
+  - package-ecosystem: docker
+    directory: /backend
+    schedule:
+      interval: weekly
   - package-ecosystem: github-actions
     directory: /
     schedule:
