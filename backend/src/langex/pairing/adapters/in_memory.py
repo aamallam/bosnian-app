@@ -71,3 +71,9 @@ class InMemoryAttemptRepository:
             a for a in self._items.values() if a.reviewer_id == reviewer_id and a.correction is None
         ]
         return sorted(found, key=lambda a: a.created_at)
+
+    def by_learner(self, pair_id: UUID, learner_id: UUID) -> list[Attempt]:
+        found = [
+            a for a in self._items.values() if a.pair_id == pair_id and a.learner_id == learner_id
+        ]
+        return sorted(found, key=lambda a: a.created_at)

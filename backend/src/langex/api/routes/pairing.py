@@ -84,6 +84,13 @@ def submit_attempt(pair_id: UUID, body: AttemptIn, session: CurrentSession) -> A
         return AttemptOut.of(c.pairing.submit_attempt(session.user_id, pair_id, body.text))
 
 
+@router.get("/pairs/{pair_id}/attempts")
+def my_attempts(pair_id: UUID, session: CurrentSession) -> list[AttemptOut]:
+    """The caller's own attempts in this pair, with corrections once given."""
+    with session.begin() as c:
+        return [AttemptOut.of(a) for a in c.pairing.my_attempts(session.user_id, pair_id)]
+
+
 @router.get("/pairs/{pair_id}/streak")
 def streak(pair_id: UUID, session: CurrentSession) -> StreakOut:
     with session.begin() as c:

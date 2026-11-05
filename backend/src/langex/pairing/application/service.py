@@ -147,6 +147,11 @@ class PairingService:
         self._attempts.add(attempt)
         return attempt
 
+    def my_attempts(self, user_id: UUID, pair_id: UUID) -> list[Attempt]:
+        """This user's own attempts in a pair, with corrections once given."""
+        pair = self._pair_for(user_id, pair_id)
+        return self._attempts.by_learner(pair.id, user_id)
+
     def to_review(self, user_id: UUID) -> list[Attempt]:
         """Attempts waiting for this user's correction."""
         return self._attempts.awaiting_review_by(user_id)

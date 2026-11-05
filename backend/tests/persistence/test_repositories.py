@@ -112,6 +112,7 @@ def test_attempt_and_correction_round_trip(app: Container) -> None:
 
     assert app.pairing.to_review(friend) == []
     assert corrected.correction is not None
+    assert app.pairing.my_attempts(me, pair.id) == [corrected]
     assert [c.item_id for c in app.learning.session(me)] == [attempt.id]
     with pytest.raises(PairingError):
         app.pairing.correct(friend, attempt.id, "Dobro sam", None)

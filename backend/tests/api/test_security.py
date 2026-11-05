@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from datetime import timedelta
+from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
@@ -21,6 +22,7 @@ PROTECTED = [
     ("post", "/v1/invitations"),
     ("get", "/v1/reviews/session"),
     ("get", "/v1/attempts/to-review"),
+    ("get", f"/v1/pairs/{uuid4()}/attempts"),
 ]
 
 
@@ -37,6 +39,29 @@ def test_protected_routes_need_a_valid_token(
     assert response.headers["www-authenticate"] == "Bearer"
     assert response.headers["content-type"] == "application/problem+json"
     assert response.json()["title"] == "Authentication failed"
+
+
+def test_outsiders_get_404_for_someone_elses_pair(client: TestClient) -> None:
+    amina, malam, eve = (auth(sign_in(client, n)) for n in ("amina", "malam", "eve"))
+    code = client.post(
+        "/v1/invitations", json={"teaches": "bs", "learns": "ar"}, headers=amina
+    ).json()["code"]
+    pair_id = client.post("/v1/invitations/accept", json={"code": code}, headers=malam).json()["id"]
+    attempt = client.post(
+        f"/v1/pairs/{pair_id}/attempts", json={"text": "Dobro jutro"}, headers=malam
+    ).json()
+
+    for method, path, body in [
+        ("get", f"/v1/pairs/{pair_id}/contributions", None),
+        ("post", f"/v1/pairs/{pair_id}/contributions", {"text": "Zdravo"}),
+        ("get", f"/v1/pairs/{pair_id}/attempts", None),
+        ("get", f"/v1/pairs/{pair_id}/streak", None),
+        ("post", f"/v1/attempts/{attempt['id']}/correction", {"corrected_text": "x"}),
+        ("get", f"/v1/pairs/{uuid4()}/attempts", None),
+    ]:
+        response = client.request(method, path, json=body, headers=eve)
+        assert response.status_code == 404, (method, path)
+        assert response.headers["content-type"] == "application/problem+json"
 
 
 def test_access_token_expires(client: TestClient, clock: FakeClock) -> None:

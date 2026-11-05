@@ -4,7 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
-    paths: ["backend/**", "render.yaml", ".github/workflows/backend-ci.yml"]
+    # The OpenAPI copy in mobile/ is checked against the API by a backend test.
+    paths: ["backend/**", "render.yaml", "mobile/test/contract/openapi.json", ".github/workflows/backend-ci.yml"]
 
 # Least privilege: jobs get read-only access unless they ask for more.
 permissions:

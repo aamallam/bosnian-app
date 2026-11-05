@@ -1,0 +1,71 @@
+name: mobile-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ["mobile/**", ".github/workflows/mobile-ci.yml"]
+
+# Least privilege: jobs get read-only access unless they ask for more.
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned Flutter release, installed from the official repository (no
+  # third-party setup action). Bump together with mobile/pubspec.yaml.
+  FLUTTER_VERSION: "3.47.9"
+
+defaults:
+  run:
+    working-directory: mobile
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install Flutter
+        working-directory: .
+        run: |
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Turn off analytics
+        run: flutter config --no-analytics && dart --disable-analytics
+      - name: Dependencies (exactly as locked)
+        run: flutter pub get --enforce-lockfile
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test tool
+      - name: Analyze
+        run: flutter analyze --fatal-infos
+      - name: Tests (unit, widget, API contract, RTL)
+        run: flutter test --coverage
+      - name: Coverage at least 85%
+        run: dart run tool/coverage_gate.dart 85
+
+  # Builds the Android app, which checks the manifest, network security
+  # config and plugin setup that unit tests do not touch.
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Install Flutter
+        working-directory: .
+        run: |
+          git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+      - name: Turn off analytics
+        run: flutter config --no-analytics && dart --disable-analytics
+      - name: Dependencies (exactly as locked)
+        run: flutter pub get --enforce-lockfile
+      - name: Build debug APK
+        run: flutter build apk --debug

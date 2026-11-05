@@ -55,6 +55,10 @@ def test_partners_teach_and_learn_each_other(client: TestClient) -> None:
     )
     assert corrected.status_code == 200
     assert corrected.json()["correction"]["comment"] == "Perfect reply!"
+    mine = client.get(f"/v1/pairs/{pair_id}/attempts", headers=amina).json()
+    assert [(a["id"], a["correction"]["corrected_text"]) for a in mine] == [
+        (attempt["id"], "صباح النور")
+    ]
     twice = client.post(
         f"/v1/attempts/{attempt['id']}/correction",
         json={"corrected_text": "x"},
