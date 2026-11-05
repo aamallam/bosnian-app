@@ -1,6 +1,6 @@
 # Engineering plan
 
-Status: draft for review · Last updated: 2026-11-04
+Status: draft for review · Last updated: 2026-11-05
 
 ## 1. Product in one paragraph
 
@@ -28,6 +28,7 @@ First language pair: **Bosnian ⇄ Arabic**. Any other pair must work without co
 | Auth | Sign in with Apple / Google (OIDC) + email passkey; no own password store | [ADR 0007](adr/0007-authentication.md) |
 | Spaced repetition | FSRS through the reference library (py-fsrs), behind a `Scheduler` port | [ADR 0008](adr/0008-fsrs-via-reference-library.md) |
 | Pairing | Hashed single-use invitations, contributions, corrections, shared streak with cover | [ADR 0009](adr/0009-pairing-model.md) |
+| API and persistence | `/v1` REST API, SQLAlchemy Core per context, one transaction per request, guarded single-use updates | [ADR 0011](adr/0011-http-api-and-persistence.md) |
 | Hosting (for now) | $0: Render (API container), Neon (Postgres), Cloudflare R2 (audio); Cloud Run as next step | [ADR 0010](adr/0010-free-tier-hosting.md) |
 
 ## 3. Repository layout
@@ -41,11 +42,14 @@ bosnian-app/                  (rename to the product name later)
 │  │  ├─ content/             sentences, translations, audio, sources, ingestion
 │  │  ├─ pairing/             pairs, invitations, daily contributions, corrections
 │  │  ├─ learning/            FSRS scheduling, reviews, progress, CEFR goals
-│  │  ├─ identity/            accounts, consent, age gate, export & deletion
-│  │  └─ bootstrap/           composition root: API app factory, workers, DI wiring
+│  │  ├─ identity/            accounts, sign-in, tokens; later consent, export & deletion
+│  │  ├─ platform/            technical helpers shared by adapters (SQL types)
+│  │  ├─ api/                 HTTP adapter: FastAPI routes, schemas, middleware
+│  │  └─ bootstrap/           composition root: settings, DI wiring, all tables
+│  ├─ migrations/             Alembic (one history for all contexts)
 │  └─ tests/                  mirrors contexts + architecture tests
 ├─ mobile/                    Flutter app (Phase 4)
-├─ infra/                     docker-compose for local dev, IaC later
+├─ infra/                     docker-compose for local dev (render.yaml at the root)
 ├─ docs/  adr/  security/  PLAN.md
 └─ .github/                   CI, Dependabot
 ```
@@ -99,7 +103,7 @@ I will refine them once you tell me how many hours a week you can put in.
 | **0. Foundations** ✅ done (branch protection still to switch on) | Repo hygiene, monorepo layout, lint/type/test/security tooling, CI, ADRs | S | CI green on `main`, branch protection on, actions pinned to SHAs |
 | **1. Learning core** ✅ in review | FSRS scheduler, `ReviewCard`, `ReviewLog`, review session use case, in-memory adapters | M | A simulated learner can review 100 cards with correct due dates; property-based tests |
 | **2. Pairing core** ✅ in review | Pair, Invitation, Contribution, Attempt, Correction, DailyGoal, Streak; domain events | M | Two simulated users can exchange sentences for a "week" in tests |
-| **3. API + persistence** | FastAPI, Postgres, Alembic, OIDC sign-in, authorisation, rate limits, OpenAPI, staging deploy | L | Staging passes OWASP API Top 10 checks; contract tests green |
+| **3. API + persistence** ✅ in review (staging deploy: your Neon/Render accounts, see [deploy.md](deploy.md)) | FastAPI, Postgres, Alembic, OIDC sign-in, authorisation, rate limits, OpenAPI, staging deploy | L | Staging passes OWASP API Top 10 checks; contract tests green |
 | **4. Mobile MVP** | Flutter: onboarding, invite partner, add sentence + audio, daily review, corrections, offline sync | L | You and your friend use it daily for 2 weeks (dogfood) |
 | **5. Content sources** | Tatoeba import, Wiktionary lookup, share-sheet capture, URL capture, then the collection worker | M–L | Each source runs as an isolated adapter with its guardrails (ADR 0006) |
 | **6. Launch hardening** | MASVS review/pen test, privacy policy, in-app account deletion, report/block, moderation queue, load test, backup restore drill, store review | M | Every item in [launch checklist](security/baseline.md#launch-checklist) ticked |

@@ -1,7 +1,8 @@
 # 7. Authentication and sessions
 
 Date: 2026-11-04
-Status: Proposed
+Status: Proposed. Apple/Google sign-in and tokens implemented in ADR 0011;
+email sign-in, device list, deletion and export still to do.
 
 ## Context
 Public app. Storing passwords means taking on breach risk, reset flows and

@@ -1,0 +1,38 @@
+# Local development: PostgreSQL + the API, as close to staging as possible.
+#
+#   cp infra/.env.example infra/.env      # then put a random secret in it
+#   docker compose -f infra/docker-compose.yml up --build
+#   open http://localhost:8000/docs
+#
+# Ports are bound to 127.0.0.1 only, so nothing is exposed to your network.
+name: langex
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: langex
+      POSTGRES_USER: langex
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-langex-local-only}
+    ports: ["127.0.0.1:5432:5432"]
+    volumes: [db-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langex -d langex"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ../backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      LANGEX_ENV: development
+      LANGEX_DATABASE_URL: postgresql://langex:${POSTGRES_PASSWORD:-langex-local-only}@db:5432/langex
+      LANGEX_JWT_SECRET: ${LANGEX_JWT_SECRET:?Set LANGEX_JWT_SECRET in infra/.env}
+      LANGEX_ALLOW_DEV_SIGN_IN: "true"
+    ports: ["127.0.0.1:8000:8000"]
+
+volumes:
+  db-data:

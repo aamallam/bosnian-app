@@ -7,6 +7,7 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+*.db
 
 # Secrets: never commit. Use .env.example for documented, fake values.
 .env
