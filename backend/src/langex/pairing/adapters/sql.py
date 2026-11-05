@@ -106,6 +106,7 @@ attempts = Table(
     Column("corrected_text", String(MAX_TEXT_LENGTH)),
     Column("correction_comment", String(MAX_NOTE_LENGTH)),
     Column("corrected_at", UtcDateTime),
+    Index("ix_pairing_attempts_pair_learner", "pair_id", "learner_id", "created_at"),
 )
 
 
@@ -334,6 +335,14 @@ class SqlAttemptRepository:
         rows = self._db.execute(
             select(attempts)
             .where(attempts.c.reviewer_id == reviewer_id, attempts.c.corrected_at.is_(None))
+            .order_by(attempts.c.created_at)
+        )
+        return [_attempt(row) for row in rows]
+
+    def by_learner(self, pair_id: UUID, learner_id: UUID) -> list[Attempt]:
+        rows = self._db.execute(
+            select(attempts)
+            .where(attempts.c.pair_id == pair_id, attempts.c.learner_id == learner_id)
             .order_by(attempts.c.created_at)
         )
         return [_attempt(row) for row in rows]

@@ -125,6 +125,8 @@ def test_attempt_correction_flow(
 
     assert corrected.correction is not None
     assert service.to_review(bosnian_speaker) == []
+    assert service.my_attempts(arabic_speaker, pair.id) == [corrected]
+    assert service.my_attempts(bosnian_speaker, pair.id) == []
     event = events.published[-1]
     assert isinstance(event, AttemptCorrected)
     assert event.learner_id == arabic_speaker
