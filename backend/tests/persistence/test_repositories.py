@@ -149,6 +149,22 @@ def test_refresh_tokens_round_trip(app: Container, clock: FakeClock) -> None:
     assert app.identity.authenticate(rotated.access_token) == signed_in.account_id
 
 
+def test_nonces_are_single_use_and_expire(
+    make_repos: Callable[[], Repositories],
+) -> None:
+    nonces = make_repos().nonces
+    nonces.add("a" * 64, START + timedelta(minutes=10))
+    nonces.add("b" * 64, START + timedelta(minutes=1))
+    nonces.add("c" * 64, START + timedelta(minutes=1))
+
+    assert nonces.consume("a" * 64, START)
+    assert not nonces.consume("a" * 64, START)  # second use
+    assert not nonces.consume("b" * 64, START + timedelta(minutes=2))  # expired
+    nonces.purge_expired(START + timedelta(minutes=2))
+    assert not nonces.consume("c" * 64, START)  # purged
+    assert not nonces.consume("d" * 64, START)  # never issued
+
+
 def test_concurrent_refresh_with_one_token_lets_only_one_win(
     make_repos: Callable[[], Repositories],
 ) -> None:

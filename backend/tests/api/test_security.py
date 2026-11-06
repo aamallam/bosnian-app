@@ -13,6 +13,8 @@ from sqlalchemy import Engine
 
 from langex.api.app import create_app
 from langex.api.rate_limit import RateLimiter
+from langex.identity.domain.account import Provider
+from langex.identity.domain.errors import AuthenticationError
 from tests.api.conftest import auth, settings_for, sign_in
 from tests.conftest import FakeClock
 
@@ -202,3 +204,33 @@ def test_rate_limiter_window_and_eviction() -> None:
     for key in "bcdefgh":
         assert limiter.hit(key, 1) is None  # old keys are evicted, memory stays bounded
     assert len(limiter._hits) <= 4
+
+
+class _EchoGoogle:
+    """Accepts `google:<sub>:<nonce>` when the nonce claim matches."""
+
+    def verify(self, id_token: str, nonce: str | None, now: object) -> str:
+        _, subject, claim = id_token.split(":", 2)
+        if nonce is None or claim != nonce:
+            raise AuthenticationError("nonce mismatch")
+        return subject
+
+
+def test_provider_sign_in_uses_server_nonces_once(engine: Engine, clock: FakeClock) -> None:
+    app = create_app(
+        settings_for(), engine=engine, clock=clock, verifiers={Provider.GOOGLE: _EchoGoogle()}
+    )
+    with TestClient(app, raise_server_exceptions=False) as client:
+        issued = client.post("/v1/auth/nonce")
+        assert issued.status_code == 200
+        assert issued.json()["expires_in"] == 600
+        nonce = issued.json()["nonce"]
+        body = {"provider": "google", "id_token": f"google:sub-1:{nonce}", "nonce": nonce}
+
+        assert client.post("/v1/auth/sign-in", json=body).status_code == 200
+        replay = client.post("/v1/auth/sign-in", json=body)
+        assert replay.status_code == 401
+        assert replay.json()["title"] == "Authentication failed"
+        assert "detail" not in replay.json()  # no hint why
+        made_up = {"provider": "google", "id_token": "google:sub-1:mine", "nonce": "mine"}
+        assert client.post("/v1/auth/sign-in", json=made_up).status_code == 401

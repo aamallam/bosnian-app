@@ -23,11 +23,40 @@ Every push to `main` deploys again. Migrations run when the container starts.
 
 ## 3. Sign-in providers
 Until at least one is set, nobody can sign in to staging (dev sign-in is refused there).
-- **Google** (free): Google Cloud Console → APIs & Services → Credentials →
-  OAuth client IDs for Android (package name + SHA-1) and iOS (bundle ID).
-  Put all client IDs in `LANGEX_GOOGLE_CLIENT_IDS`, comma-separated.
-- **Apple** (needs the $99/year Apple Developer Program): enable Sign in with
-  Apple for the app ID; put the bundle ID in `LANGEX_APPLE_CLIENT_IDS`.
+Client IDs are public identifiers, not secrets; they still stay out of git so
+each environment can have its own.
+
+### Google (free)
+In Google Cloud Console → APIs & Services → Credentials (first set up the
+OAuth consent screen: app name, support email, scopes `openid` only):
+1. **Web application** client. Its ID is the one Google issues tokens for;
+   the app passes it as `GOOGLE_SERVER_CLIENT_ID`.
+2. **Android** client: package `app.langex.langex` and the SHA-1 of the
+   signing key. For debug builds that is the Android Studio debug key:
+   `keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android`.
+   Add another Android client with the release key's SHA-1 before
+   publishing.
+3. **iOS** client (when you build for iOS): bundle ID `app.langex.langex`.
+   Add its *reversed* ID (`com.googleusercontent.apps.…`) as a URL scheme
+   in `mobile/ios/Runner/Info.plist` (`CFBundleURLTypes`).
+
+On Render set `LANGEX_GOOGLE_CLIENT_IDS` to the web and iOS client IDs,
+comma-separated. Then build the app with:
+```
+flutter run --dart-define=API_BASE_URL=https://<your-service>.onrender.com             --dart-define=GOOGLE_SERVER_CLIENT_ID=<web client ID>             --dart-define=GOOGLE_IOS_CLIENT_ID=<iOS client ID>   # iOS only
+```
+
+### Apple (needs the $99/year Apple Developer Program)
+Enable Sign in with Apple for the app ID `app.langex.langex`, add the
+capability in Xcode (it creates `Runner.entitlements`), put the bundle ID in
+`LANGEX_APPLE_CLIENT_IDS` and build with `--dart-define=APPLE_SIGN_IN=true`.
+
+### How sign-in is protected
+The app first asks the API for a nonce (`POST /v1/auth/nonce`), gives it to
+Google or Apple, and sends the resulting ID token with that nonce. The
+server checks the token (signature, issuer, audience, expiry) and that the
+nonce is one it issued in the last 10 minutes and has not been used, so a
+captured ID token cannot be replayed.
 
 ## 4. Before real users
 - Turn on a **billing alert** in Cloudflare (R2) once audio storage is added.

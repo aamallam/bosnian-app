@@ -62,5 +62,9 @@
   "errorConflict": "تمّ هذا من قبل.",
   "errorInvalid": "لم ينجح ذلك. تحقّق ممّا أدخلته.",
   "errorTooMany": "محاولات كثيرة. انتظر قليلًا، أو عُد غدًا لجمل جديدة.",
-  "errorServer": "حدث خطأ لدينا. حاول لاحقًا."
+  "errorServer": "حدث خطأ لدينا. حاول لاحقًا.",
+  "continueWithGoogle": "المتابعة باستخدام Google",
+  "continueWithApple": "المتابعة باستخدام Apple",
+  "errorSignInFailed": "لم ينجح تسجيل الدخول. حاول مجددًا.",
+  "orDevSignIn": "خادم التطوير"
 }

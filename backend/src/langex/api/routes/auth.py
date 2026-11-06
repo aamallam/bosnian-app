@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends, Request, status
 
 from langex.api.dependencies import CurrentSession, Uow
 from langex.api.rate_limit import RateLimit
-from langex.api.schemas import Me, RefreshRequest, SignInRequest, TokenResponse
-from langex.identity.application.service import TokenPair
+from langex.api.schemas import Me, NonceResponse, RefreshRequest, SignInRequest, TokenResponse
+from langex.identity.application.service import NONCE_TTL, TokenPair
 from langex.identity.domain.errors import AuthenticationError
 
 router = APIRouter(tags=["auth"], dependencies=[Depends(RateLimit("auth"))])
@@ -21,9 +21,18 @@ def _response(request: Request, tokens: TokenPair) -> TokenResponse:
     )
 
 
+@router.post("/auth/nonce")
+def nonce(uow: Uow) -> NonceResponse:
+    """A single-use nonce for the next Apple or Google sign-in."""
+    with uow.begin() as c:
+        value = c.identity.issue_nonce()
+    return NonceResponse(nonce=value, expires_in=int(NONCE_TTL.total_seconds()))
+
+
 @router.post("/auth/sign-in")
 def sign_in(body: SignInRequest, uow: Uow, request: Request) -> TokenResponse:
-    """Exchange an Apple or Google ID token for our own tokens."""
+    """Exchange an Apple or Google ID token for our own tokens. The token must
+    carry a nonce from POST /auth/nonce, and each nonce works once."""
     with uow.begin() as c:
         tokens = c.identity.sign_in(body.provider, body.id_token, body.nonce)
     return _response(request, tokens)

@@ -2,10 +2,22 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, Connection, ForeignKey, Index, String, Table, Uuid, select, update
+from sqlalchemy import (
+    Column,
+    Connection,
+    ForeignKey,
+    Index,
+    String,
+    Table,
+    Uuid,
+    delete,
+    select,
+    update,
+)
 
 from langex.identity.domain.account import Account, ExternalIdentity, Provider
 from langex.identity.domain.errors import AuthenticationError
@@ -37,6 +49,13 @@ refresh_tokens = Table(
     Column("expires_at", UtcDateTime, nullable=False),
     Column("used_at", UtcDateTime),
     Column("revoked_at", UtcDateTime),
+)
+
+nonces = Table(
+    "identity_nonces",
+    metadata,
+    Column("nonce_hash", String(64), primary_key=True),
+    Column("expires_at", UtcDateTime, nullable=False, index=True),
 )
 
 
@@ -130,3 +149,22 @@ class SqlRefreshTokenRepository:
             select(refresh_tokens).where(refresh_tokens.c.family_id == family_id)
         )
         return [_token(row) for row in rows]
+
+
+class SqlNonceRepository:
+    def __init__(self, connection: Connection) -> None:
+        self._db = connection
+
+    def add(self, nonce_hash: str, expires_at: datetime) -> None:
+        self._db.execute(nonces.insert().values(nonce_hash=nonce_hash, expires_at=expires_at))
+
+    def consume(self, nonce_hash: str, now: datetime) -> bool:
+        # One DELETE decides: of two concurrent sign-ins with the same nonce,
+        # only one removes the row.
+        result = self._db.execute(
+            delete(nonces).where(nonces.c.nonce_hash == nonce_hash, nonces.c.expires_at > now)
+        )
+        return result.rowcount == 1
+
+    def purge_expired(self, now: datetime) -> None:
+        self._db.execute(delete(nonces).where(nonces.c.expires_at <= now))

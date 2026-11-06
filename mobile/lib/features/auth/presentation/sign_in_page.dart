@@ -6,6 +6,7 @@ import '../../../core/ui/async_view.dart';
 import '../../../l10n/app_localizations.dart';
 import '../application/auth_actions.dart';
 import '../data/auth_api.dart';
+import '../data/identity_providers.dart';
 
 class SignInPage extends ConsumerStatefulWidget {
   const SignInPage({super.key});
@@ -23,6 +24,21 @@ class _SignInPageState extends ConsumerState<SignInPage> {
   void dispose() {
     _name.dispose();
     super.dispose();
+  }
+
+  Future<void> _providerSignIn(IdentityProvider provider) async {
+    setState(() => _busy = true);
+    try {
+      await ref.read(authActionsProvider).signInWith(provider);
+    } on SignInFailed {
+      if (mounted) {
+        showMessage(context, AppLocalizations.of(context).errorSignInFailed);
+      }
+    } on Exception catch (e) {
+      if (mounted) showError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<void> _devSignIn() async {
@@ -44,6 +60,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
     final l = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final devSignIn = ref.watch(configProvider).devSignIn;
+    final providers = ref.watch(identityProvidersProvider);
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -60,6 +77,25 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                   const SizedBox(height: 8),
                   Text(l.signInBody, style: theme.textTheme.bodyLarge),
                   const SizedBox(height: 32),
+                  for (final provider in providers) ...[
+                    FilledButton.icon(
+                      key: Key('sign-in-${provider.id}'),
+                      onPressed: _busy ? null : () => _providerSignIn(provider),
+                      icon: Icon(
+                        provider.id == 'apple' ? Icons.apple : Icons.login,
+                      ),
+                      label: Text(
+                        provider.id == 'apple'
+                            ? l.continueWithApple
+                            : l.continueWithGoogle,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                  if (devSignIn && providers.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    Text(l.orDevSignIn, style: theme.textTheme.labelLarge),
+                  ],
                   if (devSignIn)
                     Form(
                       key: _form,
@@ -90,7 +126,7 @@ class _SignInPageState extends ConsumerState<SignInPage> {
                         ],
                       ),
                     )
-                  else
+                  else if (providers.isEmpty)
                     Text(l.noSignInMethods, textAlign: TextAlign.center),
                 ],
               ),

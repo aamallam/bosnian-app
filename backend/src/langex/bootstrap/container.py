@@ -19,15 +19,21 @@ from langex.bootstrap.event_bus import InMemoryEventBus
 from langex.bootstrap.settings import Settings
 from langex.identity.adapters.in_memory import (
     InMemoryAccountRepository,
+    InMemoryNonceRepository,
     InMemoryRefreshTokenRepository,
 )
 from langex.identity.adapters.oidc import APPLE, GOOGLE, DevVerifier, OidcVerifier
-from langex.identity.adapters.sql import SqlAccountRepository, SqlRefreshTokenRepository
+from langex.identity.adapters.sql import (
+    SqlAccountRepository,
+    SqlNonceRepository,
+    SqlRefreshTokenRepository,
+)
 from langex.identity.adapters.tokens import JwtAccessTokens
 from langex.identity.application.ports import (
     AccessTokens,
     AccountRepository,
     IdTokenVerifier,
+    NonceRepository,
     RefreshTokenRepository,
 )
 from langex.identity.application.service import IdentityService
@@ -78,6 +84,7 @@ class Container:
 class Repositories:
     accounts: AccountRepository
     refresh_tokens: RefreshTokenRepository
+    nonces: NonceRepository
     invitations: InvitationRepository
     pairs: PairRepository
     contributions: ContributionRepository
@@ -124,6 +131,7 @@ def assemble(repos: Repositories, infra: Infrastructure) -> Container:
     identity = IdentityService(
         accounts=repos.accounts,
         refresh_tokens=repos.refresh_tokens,
+        nonces=repos.nonces,
         access_tokens=infra.access_tokens,
         verifiers=infra.verifiers,
         clock=infra.clock,
@@ -172,6 +180,7 @@ def sql_repositories(connection: Connection) -> Repositories:
     return Repositories(
         accounts=SqlAccountRepository(connection),
         refresh_tokens=SqlRefreshTokenRepository(connection),
+        nonces=SqlNonceRepository(connection),
         invitations=SqlInvitationRepository(connection),
         pairs=SqlPairRepository(connection),
         contributions=SqlContributionRepository(connection),
@@ -185,6 +194,7 @@ def in_memory_repositories() -> Repositories:
     return Repositories(
         accounts=InMemoryAccountRepository(),
         refresh_tokens=InMemoryRefreshTokenRepository(),
+        nonces=InMemoryNonceRepository(),
         invitations=InMemoryInvitationRepository(),
         pairs=InMemoryPairRepository(),
         contributions=InMemoryContributionRepository(),

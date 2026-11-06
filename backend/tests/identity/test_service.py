@@ -1,15 +1,16 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from uuid import uuid4
 
 import pytest
 
 from langex.identity.adapters.in_memory import (
     InMemoryAccountRepository,
+    InMemoryNonceRepository,
     InMemoryRefreshTokenRepository,
 )
 from langex.identity.adapters.oidc import DevVerifier
 from langex.identity.adapters.tokens import JwtAccessTokens
-from langex.identity.application.service import IdentityService
+from langex.identity.application.service import NONCE_TTL, IdentityService
 from langex.identity.domain.account import ExternalIdentity, Provider
 from langex.identity.domain.errors import AuthenticationError
 from langex.identity.domain.refresh_token import RefreshToken
@@ -26,11 +27,45 @@ def service(clock: FakeClock) -> IdentityService:
     return IdentityService(
         accounts=InMemoryAccountRepository(),
         refresh_tokens=InMemoryRefreshTokenRepository(),
+        nonces=InMemoryNonceRepository(),
         access_tokens=JwtAccessTokens("k" * 40),
-        verifiers={Provider.DEV: DevVerifier()},
+        verifiers={Provider.DEV: DevVerifier(), Provider.GOOGLE: _NonceEchoVerifier()},
         clock=clock,
         refresh_ttl=timedelta(days=30),
     )
+
+
+class _NonceEchoVerifier:
+    """Stands in for Google: the token `google:<sub>:<nonce>` is valid when
+    its nonce claim equals the nonce sent with it (what OidcVerifier checks)."""
+
+    def verify(self, id_token: str, nonce: str | None, now: datetime) -> str:
+        _, subject, claim = id_token.split(":", 2)
+        if nonce is None or claim != nonce:
+            raise AuthenticationError("nonce mismatch")
+        return subject
+
+
+def test_provider_sign_in_needs_a_server_issued_nonce(service: IdentityService) -> None:
+    nonce = service.issue_nonce()
+
+    signed_in = service.sign_in(Provider.GOOGLE, f"google:sub-1:{nonce}", nonce)
+
+    assert signed_in.is_new_account
+    with pytest.raises(AuthenticationError):  # replaying the same token
+        service.sign_in(Provider.GOOGLE, f"google:sub-1:{nonce}", nonce)
+    made_up = "client-made-up-nonce"
+    with pytest.raises(AuthenticationError):  # a nonce we never issued
+        service.sign_in(Provider.GOOGLE, f"google:sub-1:{made_up}", made_up)
+
+
+def test_nonces_expire(service: IdentityService, clock: FakeClock) -> None:
+    nonce = service.issue_nonce()
+    clock.advance(NONCE_TTL + timedelta(seconds=1))
+
+    with pytest.raises(AuthenticationError):
+        service.sign_in(Provider.GOOGLE, f"google:sub-1:{nonce}", nonce)
+    assert service.issue_nonce() != nonce
 
 
 def test_first_sign_in_opens_an_account_once(service: IdentityService) -> None:
@@ -41,12 +76,12 @@ def test_first_sign_in_opens_an_account_once(service: IdentityService) -> None:
     assert not again.is_new_account
     assert again.account_id == first.account_id
     assert service.authenticate(first.access_token) == first.account_id
-    assert service.providers == [Provider.DEV]
+    assert service.providers == [Provider.DEV, Provider.GOOGLE]
 
 
 def test_disabled_provider_is_refused(service: IdentityService) -> None:
     with pytest.raises(AuthenticationError):
-        service.sign_in(Provider.APPLE, "anything")
+        service.sign_in(Provider.APPLE, "anything", "nonce")
 
 
 def test_refresh_rotates_the_token(service: IdentityService) -> None:
@@ -106,6 +141,7 @@ def test_token_for_a_missing_account_is_rejected(clock: FakeClock) -> None:
     service = IdentityService(
         accounts=InMemoryAccountRepository(),
         refresh_tokens=InMemoryRefreshTokenRepository(),
+        nonces=InMemoryNonceRepository(),
         access_tokens=tokens,
         verifiers={},
         clock=clock,
