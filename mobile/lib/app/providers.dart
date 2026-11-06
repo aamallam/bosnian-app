@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
@@ -6,6 +7,7 @@ import '../core/auth/session.dart';
 import '../core/auth/token_store.dart';
 import '../core/config.dart';
 import '../features/auth/data/auth_api.dart';
+import '../features/auth/data/identity_providers.dart';
 import '../features/languages/language.dart';
 import '../features/learning/data/learning_api.dart';
 import '../features/pairing/data/pairing_api.dart';
@@ -62,3 +64,18 @@ final pairingApiProvider = Provider<PairingApi>(
 final learningApiProvider = Provider<LearningApi>(
   (ref) => LearningApi(ref.watch(apiClientProvider)),
 );
+
+/// The sign-in methods this build offers, in the order shown.
+final identityProvidersProvider = Provider<List<IdentityProvider>>((ref) {
+  final config = ref.watch(configProvider);
+  final ios = defaultTargetPlatform == TargetPlatform.iOS;
+  final google = config.googleServerClientId;
+  return [
+    if (config.appleSignIn && ios) AppleIdentityProvider(),
+    if (google != null && (!ios || config.googleIosClientId != null))
+      GoogleIdentityProvider(
+        serverClientId: google,
+        iosClientId: config.googleIosClientId,
+      ),
+  ];
+});

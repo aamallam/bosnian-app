@@ -32,6 +32,10 @@ class AuthApi {
   final ApiClient _client;
   final DateTime Function() _now;
 
+  /// A single-use value for the next Apple or Google sign-in (10 minutes).
+  Future<String> nonce() async =>
+      asJson(await _client.post('/v1/auth/nonce')).str('nonce');
+
   Future<Tokens> signIn(SignInCredential credential) async => _tokens(
     await _client.post(
       '/v1/auth/sign-in',

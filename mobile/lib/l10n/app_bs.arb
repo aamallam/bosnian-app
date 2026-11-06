@@ -62,5 +62,9 @@
   "errorConflict": "Ovo je već urađeno.",
   "errorInvalid": "Nije uspjelo. Provjerite šta ste unijeli.",
   "errorTooMany": "Previše pokušaja. Sačekajte malo ili se vratite sutra po nove rečenice.",
-  "errorServer": "Nešto nije u redu kod nas. Pokušajte kasnije."
+  "errorServer": "Nešto nije u redu kod nas. Pokušajte kasnije.",
+  "continueWithGoogle": "Nastavi s Googleom",
+  "continueWithApple": "Nastavi s Appleom",
+  "errorSignInFailed": "Prijava nije uspjela. Pokušajte ponovo.",
+  "orDevSignIn": "Razvojni server"
 }

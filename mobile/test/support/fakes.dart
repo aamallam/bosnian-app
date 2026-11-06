@@ -9,6 +9,8 @@ import 'package:langex/app/app.dart';
 import 'package:langex/app/providers.dart';
 import 'package:langex/core/auth/token_store.dart';
 import 'package:langex/core/config.dart';
+import 'package:langex/features/auth/data/auth_api.dart';
+import 'package:langex/features/auth/data/identity_providers.dart';
 
 final apiBase = Uri.parse('https://api.test');
 
@@ -111,6 +113,7 @@ Future<ProviderContainer> pumpApp(
   FakeBackend api, {
   Tokens? tokens,
   bool devSignIn = true,
+  List<IdentityProvider> identity = const [],
 }) async {
   final container = ProviderContainer(
     overrides: [
@@ -119,6 +122,7 @@ Future<ProviderContainer> pumpApp(
       ),
       httpClientProvider.overrideWithValue(api.client),
       tokenStoreProvider.overrideWithValue(MemoryTokenStore(tokens)),
+      identityProvidersProvider.overrideWithValue(identity),
     ],
     retry: (_, _) => null,
   );
@@ -143,3 +147,34 @@ extension Settle on WidgetTester {
 }
 
 Widget wrap(Widget child) => MaterialApp(home: child);
+
+/// A Google stand-in: returns an ID token that names the nonce it was given,
+/// or null (cancelled), or throws.
+class FakeIdentityProvider implements IdentityProvider {
+  FakeIdentityProvider({this.id = 'google', this.result = 'ok'});
+
+  @override
+  final String id;
+
+  /// 'ok', 'cancel' or 'fail'.
+  String result;
+  final nonces = <String>[];
+  int forgotten = 0;
+
+  @override
+  Future<SignInCredential?> obtain(String nonce) async {
+    nonces.add(nonce);
+    return switch (result) {
+      'cancel' => null,
+      'fail' => throw const SignInFailed('test'),
+      _ => SignInCredential(
+        provider: id,
+        idToken: '$id-token:$nonce',
+        nonce: nonce,
+      ),
+    };
+  }
+
+  @override
+  Future<void> forget() async => forgotten++;
+}

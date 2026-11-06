@@ -67,14 +67,31 @@ and the corrected-sentence review cards.
   outbox for sentences, attempts and reviews, and FSRS on the device with
   test vectors shared with Python (ADR 0005). This needs the API to accept a
   client-side `reviewed_at` and idempotency keys.
-- **Sign in with Apple and Google** (a nonce in each request; native setup
-  with the client IDs from docs/deploy.md). Until then only the development
-  server can be used, with `DEV_SIGN_IN`.
 - Audio recording and playback, share links and QR codes for invitations,
   push reminders.
 
+## Sign in with Google and Apple (added 2026-11-06)
+- **Server-issued, single-use nonces.** The ID token's nonce used to be
+  compared only with a value the app chose, and anyone holding a stolen ID
+  token can read its nonce claim. Now the app gets a nonce from
+  `POST /v1/auth/nonce` (random, 256 bits, stored as SHA-256, valid for
+  10 minutes). Sign-in accepts a provider token only when its nonce matches
+  one we issued. The nonce is consumed by a single guarded `DELETE`, so of
+  two concurrent sign-ins only one wins. Expired nonces are purged when new
+  ones are issued. The dev provider needs no nonce and is refused outside
+  development.
+- The app uses `google_sign_in` 7 (Android Credential Manager, iOS SDK) and
+  `sign_in_with_apple`, behind an `IdentityProvider` port. Each attempt
+  passes the fresh nonce. We ask for no name or email: only the provider's
+  subject is stored (ADR 0007). Signing out also signs out of Google on the
+  device, so a shared phone can pick another account.
+- Providers appear only when the build has their settings
+  (`GOOGLE_SERVER_CLIENT_ID`, plus `GOOGLE_IOS_CLIENT_ID` on iOS, and
+  `APPLE_SIGN_IN` on iOS). Cancelling stays quiet. Provider errors show a
+  generic message.
+
 ## Consequences
-- Dogfooding against staging needs Part 2's Google sign-in. Until then we
-  can use the app against a local server.
+- Dogfooding against staging needs the Google client IDs from
+  docs/deploy.md. Until then we can use the app against a local server.
 - If the backend and the app disagree about the API, CI fails on both sides
   before a release.

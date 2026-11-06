@@ -208,6 +208,7 @@ void main() {
     final public = ApiClient(baseUrl: apiBase, client: server.client);
 
     final auth = AuthApi(public);
+    expect(await auth.nonce(), isNotEmpty);
     await auth.signIn(SignInCredential.dev('amina'));
     await auth.signIn(
       const SignInCredential(provider: 'google', idToken: 't', nonce: 'n'),

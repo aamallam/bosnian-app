@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import timedelta
@@ -11,6 +12,7 @@ from langex.identity.application.ports import (
     AccessTokens,
     AccountRepository,
     IdTokenVerifier,
+    NonceRepository,
     RefreshTokenRepository,
 )
 from langex.identity.domain.account import Account, ExternalIdentity, Provider
@@ -19,6 +21,7 @@ from langex.identity.domain.refresh_token import RefreshToken, hash_token
 from langex.shared_kernel.clock import Clock
 
 DEFAULT_REFRESH_TTL = timedelta(days=30)
+NONCE_TTL = timedelta(minutes=10)
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +37,7 @@ class IdentityService:
         self,
         accounts: AccountRepository,
         refresh_tokens: RefreshTokenRepository,
+        nonces: NonceRepository,
         access_tokens: AccessTokens,
         verifiers: Mapping[Provider, IdTokenVerifier],
         clock: Clock,
@@ -41,6 +45,7 @@ class IdentityService:
     ) -> None:
         self._accounts = accounts
         self._refresh_tokens = refresh_tokens
+        self._nonces = nonces
         self._access_tokens = access_tokens
         self._verifiers = verifiers
         self._clock = clock
@@ -50,11 +55,26 @@ class IdentityService:
     def providers(self) -> list[Provider]:
         return sorted(self._verifiers)
 
+    def issue_nonce(self) -> str:
+        """A random value for the next Apple or Google sign-in. The provider
+        signs it into the ID token; sign-in accepts each one once, within
+        NONCE_TTL, so a captured ID token cannot be replayed here."""
+        now = self._clock.now()
+        self._nonces.purge_expired(now)
+        nonce = secrets.token_urlsafe(32)
+        self._nonces.add(hash_token(nonce), now + NONCE_TTL)
+        return nonce
+
     def sign_in(self, provider: Provider, id_token: str, nonce: str | None = None) -> TokenPair:
         verifier = self._verifiers.get(provider)
         if verifier is None:
             raise AuthenticationError(f"provider {provider} is not enabled")
-        subject = verifier.verify(id_token, nonce, self._clock.now())
+        now = self._clock.now()
+        subject = verifier.verify(id_token, nonce, now)
+        # DEV tokens carry no nonce; settings refuse DEV outside development.
+        nonce_ok = nonce is not None and self._nonces.consume(hash_token(nonce), now)
+        if provider is not Provider.DEV and not nonce_ok:
+            raise AuthenticationError("nonce unknown, expired or already used")
         identity = ExternalIdentity(provider, subject)
         account = self._accounts.find_by_identity(identity)
         is_new = account is None

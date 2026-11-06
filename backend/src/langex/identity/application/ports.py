@@ -33,6 +33,18 @@ class AccountRepository(Protocol):
     def find_by_identity(self, identity: ExternalIdentity) -> Account | None: ...
 
 
+class NonceRepository(Protocol):
+    """Single-use sign-in nonces, stored as SHA-256 hashes."""
+
+    def add(self, nonce_hash: str, expires_at: datetime) -> None: ...
+
+    def consume(self, nonce_hash: str, now: datetime) -> bool:
+        """Remove the nonce; True only if it existed and had not expired."""
+        ...
+
+    def purge_expired(self, now: datetime) -> None: ...
+
+
 class RefreshTokenRepository(Protocol):
     def add(self, token: RefreshToken) -> None: ...
 

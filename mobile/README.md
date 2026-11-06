@@ -36,6 +36,10 @@ simulator use `http://localhost:8000`. Plain HTTP works only for these local
 addresses and only in debug builds; everything else must use HTTPS.
 `DEV_SIGN_IN` shows a name field that only a development server accepts.
 
+Against staging, sign in with Google instead: pass `GOOGLE_SERVER_CLIENT_ID`
+(and `GOOGLE_IOS_CLIENT_ID` on iOS). [docs/deploy.md](../docs/deploy.md#3-sign-in-providers)
+explains how to create these IDs.
+
 ## Checks (the same as CI)
 
 ```bash

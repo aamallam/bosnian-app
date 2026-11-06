@@ -450,6 +450,26 @@
         "title": "MemberOut",
         "type": "object"
       },
+      "NonceResponse": {
+        "properties": {
+          "expires_in": {
+            "description": "Seconds until it can no longer be used",
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "nonce": {
+            "description": "Pass to Apple or Google, then send it with sign-in",
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce",
+          "expires_in"
+        ],
+        "title": "NonceResponse",
+        "type": "object"
+      },
       "PairOut": {
         "properties": {
           "created_at": {
@@ -779,6 +799,28 @@
         ]
       }
     },
+    "/v1/auth/nonce": {
+      "post": {
+        "description": "A single-use nonce for the next Apple or Google sign-in.",
+        "operationId": "nonce_v1_auth_nonce_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NonceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Nonce",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/v1/auth/refresh": {
       "post": {
         "description": "Rotate the refresh token. Reusing an old one signs the device out.",
@@ -823,7 +865,7 @@
     },
     "/v1/auth/sign-in": {
       "post": {
-        "description": "Exchange an Apple or Google ID token for our own tokens.",
+        "description": "Exchange an Apple or Google ID token for our own tokens. The token must\ncarry a nonce from POST /auth/nonce, and each nonce works once.",
         "operationId": "sign_in_v1_auth_sign_in_post",
         "requestBody": {
           "content": {

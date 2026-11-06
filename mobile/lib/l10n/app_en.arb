@@ -70,5 +70,9 @@
   "errorConflict": "This was already done.",
   "errorInvalid": "That didn't work. Check what you entered.",
   "errorTooMany": "Too many tries. Wait a moment, or come back tomorrow for more sentences.",
-  "errorServer": "Something went wrong on our side. Try again later."
+  "errorServer": "Something went wrong on our side. Try again later.",
+  "continueWithGoogle": "Continue with Google",
+  "continueWithApple": "Continue with Apple",
+  "errorSignInFailed": "Sign-in didn't work. Try again.",
+  "orDevSignIn": "Development server"
 }

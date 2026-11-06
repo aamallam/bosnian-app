@@ -31,6 +31,11 @@ class SignInRequest(Input):
     nonce: Annotated[str, StringConstraints(max_length=256)] | None = None
 
 
+class NonceResponse(BaseModel):
+    nonce: str = Field(description="Pass to Apple or Google, then send it with sign-in")
+    expires_in: int = Field(description="Seconds until it can no longer be used")
+
+
 class RefreshRequest(Input):
     refresh_token: Annotated[str, StringConstraints(min_length=1, max_length=256)]
 

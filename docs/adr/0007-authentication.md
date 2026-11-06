@@ -11,7 +11,7 @@ credential stuffing. Apple requires Sign in with Apple when other social sign-in
 ## Decision
 - Sign-in with **Apple** and **Google** (OpenID Connect, PKCE), plus **email
   magic link or passkey**. No password storage of our own.
-- The backend validates provider ID tokens (issuer, audience, signature, expiry, nonce)
+- The backend validates provider ID tokens (issuer, audience, signature, expiry, nonce: server-issued and single-use, see ADR 0012)
   and issues its own **short-lived access token** (≤ 15 min) and a **rotating
   refresh token** with reuse detection; refresh tokens are stored hashed and
   bound to a device record that the user can revoke.
